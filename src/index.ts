@@ -1,12 +1,12 @@
-import { Hex, createPublicClient, createTestClient, createWalletClient, encodePacked, extractChain, fromHex, hexToBytes, http, toHex } from 'viem';
+import { Hex, createPublicClient, createWalletClient, extractChain, http } from 'viem';
 import { privateKeyToAccount } from 'viem/accounts';
 import { foundry, goerli, sepolia } from 'viem/chains';
 import { abi as verifyAbi } from './verify';
 import { abi as blobstreamxAbi } from './blobstreamx';
-import { AttestationProof, BinaryMerkleProof, Namespace, NamespaceMerkleMultiproof, NamespaceNode, SharesProof } from './types';
+import { AttestationProof, SharesProof } from './types';
 import { chainId, hexToNamespace } from './utils';
 import { program } from 'commander';
-import { getDataRoot, getDataRootInclusionProof, getProveShares } from './network';
+import { CelestiaClient } from './network';
 
 async function main() {
   require('dotenv').config();
@@ -30,18 +30,25 @@ async function main() {
   const celestiaRpcUrl = process.env.CELESTIA_RPC_URL!;
   const namespaceHex = process.env.NAMESPACE! as Hex;
 
-  program.option('-h, --height <height>', 'height of the shares');
+  program
+    .option('-h, --height <height>', 'block height')
+    .option('-s, --start <start>', 'block start for range')
+    .option('-e, --end <end>', 'block end for range');
   program.parse(process.argv);
   const options = program.opts();
-  const height = options.height;
+  const height = BigInt(options.height);
+  const start = BigInt(options.start);
+  const end = BigInt(options.end);
+
   const namespace = hexToNamespace(namespaceHex);
   const proofNonce = BigInt(1185);
-  const shareProofs = await getProveShares(celestiaRpcUrl, height, namespaceHex);
+  const celestiaClient = new CelestiaClient(celestiaRpcUrl);
+  const shareProofs = await celestiaClient.getProveShares(height, namespaceHex);
   if (!shareProofs) {
     throw new Error('Failed to get share proofs');
   }
-  const dataRootInclusionProof = await getDataRootInclusionProof(celestiaRpcUrl, height, 840030, 840336);
-  const dataRoot = await getDataRoot(celestiaRpcUrl, height);
+  const dataRootInclusionProof = await celestiaClient.getDataRootInclusionProof(height, start, end);
+  const dataRoot = await celestiaClient.getDataRoot(height);
   const dataRootTuple = { height, dataRoot };
   const attestationProof: AttestationProof = {
     tupleRootNonce: proofNonce,
@@ -59,31 +66,22 @@ async function main() {
   }
 
 
-  const res = await publicClient.simulateContract({
+  const res = await publicClient.readContract({
     address: verifyContract,
     abi: verifyAbi,
-    functionName: 'verifyShares',
+    functionName: 'verify',
     args: [
+      bridge,
       sharesProof,
       dataRoot,
     ]
   });
-  console.log(res);
 
-  const writeRes = await walletClient.writeContract({
-    address: verifyContract,
-    abi: verifyAbi,
-    functionName: 'verifyShares',
-    args: [
-      sharesProof,
-      dataRoot,
-    ]
-  });
-  console.log(writeRes);
-
-  const json = JSON.stringify(sharesProof , (key, value) => {
-    return typeof value === 'bigint' ? value.toString() : value;
-  });
+  if (res[0]) {
+    console.log('Verified');
+  } else {
+    console.log('Error verifying: ', res[1]);
+  }
 }
 
 main().catch(console.error);

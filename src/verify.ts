@@ -1,10 +1,15 @@
 export const abi = [
   {
     "type": "function",
-    "name": "verifyShares",
+    "name": "verify",
     "inputs": [
       {
-        "name": "_sharesProof",
+        "name": "bridgeAddress",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "sharesProof",
         "type": "tuple",
         "internalType": "struct SharesProof",
         "components": [
@@ -215,7 +220,7 @@ export const abi = [
         ]
       },
       {
-        "name": "_root",
+        "name": "dataRoot",
         "type": "bytes32",
         "internalType": "bytes32"
       }
@@ -229,89 +234,9 @@ export const abi = [
       {
         "name": "",
         "type": "uint8",
-        "internalType": "enum Verify.ErrorCodes"
+        "internalType": "enum DAVerifier.ErrorCodes"
       }
     ],
-    "stateMutability": "nonpayable"
-  },
-  {
-    "type": "event",
-    "name": "logEvents",
-    "inputs": [
-      {
-        "name": "",
-        "type": "string",
-        "indexed": false,
-        "internalType": "string"
-      }
-    ],
-    "anonymous": false
-  },
-  {
-    "type": "event",
-    "name": "logNamespaceNode",
-    "inputs": [
-      {
-        "name": "",
-        "type": "tuple",
-        "indexed": false,
-        "internalType": "struct NamespaceNode",
-        "components": [
-          {
-            "name": "min",
-            "type": "tuple",
-            "internalType": "struct Namespace",
-            "components": [
-              {
-                "name": "version",
-                "type": "bytes1",
-                "internalType": "bytes1"
-              },
-              {
-                "name": "id",
-                "type": "bytes28",
-                "internalType": "bytes28"
-              }
-            ]
-          },
-          {
-            "name": "max",
-            "type": "tuple",
-            "internalType": "struct Namespace",
-            "components": [
-              {
-                "name": "version",
-                "type": "bytes1",
-                "internalType": "bytes1"
-              },
-              {
-                "name": "id",
-                "type": "bytes28",
-                "internalType": "bytes28"
-              }
-            ]
-          },
-          {
-            "name": "digest",
-            "type": "bytes32",
-            "internalType": "bytes32"
-          }
-        ]
-      }
-    ],
-    "anonymous": false
-  },
-  {
-    "type": "event",
-    "name": "logUint256",
-    "inputs": [
-      {
-        "name": "",
-        "type": "uint256",
-        "indexed": false,
-        "internalType": "uint256"
-      }
-    ],
-    "anonymous": false
+    "stateMutability": "view"
   }
 ] as const

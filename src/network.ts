@@ -1,6 +1,6 @@
 import { Hex, toHex } from "viem";
 import { NamespaceNode } from "./types";
-import axios, { AxiosError } from "axios";
+import axios, { AxiosError, AxiosInstance } from "axios";
 
 type ProveShares = {
   data: string[];
@@ -24,43 +24,68 @@ type ProveShares = {
   namespace_version: number;
 }
 
-export async function getProveShares(rpcUrl: string, height: number, namespace: Hex) {
-  let startShare = 0;
-  let endShare = 255;
-  while (startShare <= endShare) {
-    try {
-      const response = await axios.get(rpcUrl + `/prove_shares?height=${height}&startShare=${startShare}&endShare=${endShare}`);
-      const data = response.data as { result: ProveShares };
-      const proveShares = data.result;
-      return parseProveShares(proveShares);
-    } catch (error: any) {
-      if (axios.isAxiosError(error)) {
-        const e = error as AxiosError;
-        const responseData = e.response?.data as { error: { data: string } };
-        const data = responseData.error.data;
-        const includes = data.includes('shares range contain different namespaces at index');
-        if (includes) {
-          const regex = /shares range contain different namespaces at index (\d+): \{(\d+) \[(.*)\]\} and \{(\d+) \[(.*)\]\}/;
-          const m = data.match(regex);
-          if (m) {
-            const firstNamespace = getNamespace(m[2], m[3]);
-            if (firstNamespace === namespace) {
-              endShare = startShare + parseInt(m[1]);
-            } else {
-              startShare += parseInt(m[1]);
+export class CelestiaClient {
+  private client: AxiosInstance;
+  constructor(private rpcUrl: string) {
+    this.client = axios.create({
+      baseURL: rpcUrl,
+    });
+  }
+
+  async getProveShares(height: bigint, namespace: Hex) {
+    let startShare = 0;
+    let endShare = 255;
+    while (startShare <= endShare) {
+      try {
+        const response = await this.client.get(`/prove_shares?height=${height}&startShare=${startShare}&endShare=${endShare}`);
+        const data = response.data as { result: ProveShares };
+        const proveShares = data.result;
+        return parseProveShares(proveShares);
+      } catch (error: any) {
+        if (axios.isAxiosError(error)) {
+          const e = error as AxiosError;
+          const responseData = e.response?.data as { error: { data: string } };
+          const data = responseData.error.data;
+          const includes = data.includes('shares range contain different namespaces at index');
+          if (includes) {
+            const regex = /shares range contain different namespaces at index (\d+): \{(\d+) \[(.*)\]\} and \{(\d+) \[(.*)\]\}/;
+            const m = data.match(regex);
+            if (m) {
+              const firstNamespace = parseNamespaceBytes(m[2], m[3]);
+              if (firstNamespace === namespace) {
+                endShare = startShare + parseInt(m[1]);
+              } else {
+                startShare += parseInt(m[1]);
+              }
             }
+          } else {
+            throw new Error(data);
           }
         } else {
-          throw new Error(data);
+          throw error;
         }
-      } else {
-        throw error;
-      }
+    }
+    }
   }
+
+  async getDataRootInclusionProof(height: bigint, start: bigint, end: bigint) {
+    const response = await this.client.get(`/data_root_inclusion_proof?height=${height}&start=${start}&end=${end}`);
+    const data = response.data as { result: { proof: { total: string, index: string, leaf_hash: string, aunts: string[] } } };
+    const proof = data.result.proof;
+    const sideNodes = proof.aunts.map((node) => toHex(Uint8Array.from(atob(node), c => c.charCodeAt(0))));
+    const key = BigInt(proof.index);
+    const numLeaves = BigInt(proof.total);
+    return { key, numLeaves, sideNodes };
+  }
+
+  async getDataRoot(height: bigint) {
+    const response = await this.client.get(`/block?height=${height}`);
+    const data = response.data as { result: { block: { header: { data_hash: string } } } };
+    return '0x' + data.result.block.header.data_hash as Hex;
   }
 }
 
-function getNamespace(version: string, id: string) {
+function parseNamespaceBytes(version: string, id: string) {
   const n = id.split(" ");
   n.unshift(version);
   const namespace = new Uint8Array(29);
@@ -129,18 +154,3 @@ function parseRowRoots(roots: string[]): NamespaceNode[] {
   return rowRoots;
 }
 
-export async function getDataRootInclusionProof(rpcUrl: string, height: number, start: number, end: number) {
-  const response = await axios.get(rpcUrl + `/data_root_inclusion_proof?height=${height}&start=${start}&end=${end}`);
-  const data = response.data as { result: { proof: { total: string, index: string, leaf_hash: string, aunts: string[] } } };
-  const proof = data.result.proof;
-  const sideNodes = proof.aunts.map((node) => toHex(Uint8Array.from(atob(node), c => c.charCodeAt(0))));
-  const key = BigInt(proof.index);
-  const numLeaves = BigInt(proof.total);
-  return { key, numLeaves, sideNodes };
-}
-
-export async function getDataRoot(rpcUrl: string, height: number) {
-  const response = await axios.get(rpcUrl + `/block?height=${height}`);
-  const data = response.data as { result: { block: { header: { data_hash: string } } } };
-  return '0x' + data.result.block.header.data_hash as Hex;
-}
