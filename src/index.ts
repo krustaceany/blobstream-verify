@@ -1,8 +1,7 @@
-import { Hex, createPublicClient, createWalletClient, extractChain, http } from 'viem';
+import { Hex, createPublicClient, extractChain, http } from 'viem';
 import { privateKeyToAccount } from 'viem/accounts';
 import { foundry, goerli, sepolia } from 'viem/chains';
 import { abi as verifyAbi } from './verify';
-import { abi as blobstreamxAbi } from './blobstreamx';
 import { AttestationProof, SharesProof } from './types';
 import { chainId, hexToNamespace } from './utils';
 import { program } from 'commander';
@@ -14,11 +13,6 @@ async function main() {
   const account = privateKeyToAccount(privateKey);
   const id = process.env.CHAIN_ID!;
   const chain = extractChain({chains: [foundry, goerli, sepolia], id: chainId(id)});
-  const walletClient = createWalletClient({
-    chain,
-    transport: http(),
-    account
-  });
   const publicClient = createPublicClient({
     chain,
     transport: http()
