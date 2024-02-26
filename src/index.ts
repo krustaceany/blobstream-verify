@@ -27,15 +27,17 @@ async function main() {
   program
     .option('-h, --height <height>', 'block height')
     .option('-s, --start <start>', 'block start for range')
-    .option('-e, --end <end>', 'block end for range');
+    .option('-e, --end <end>', 'block end for range')
+    .option('-n, --nonce <nonce>', 'proof nonce');
+
   program.parse(process.argv);
   const options = program.opts();
   const height = BigInt(options.height);
   const start = BigInt(options.start);
   const end = BigInt(options.end);
+  const proofNonce = BigInt(options.nonce);
 
   const namespace = hexToNamespace(namespaceHex);
-  const proofNonce = BigInt(1185);
   const celestiaClient = new CelestiaClient(celestiaRpcUrl);
   const shareProofs = await celestiaClient.getProveShares(height, namespaceHex);
   if (!shareProofs) {
