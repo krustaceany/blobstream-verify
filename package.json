@@ -1,5 +1,5 @@
 {
-  "name": "verify_call",
+  "name": "verify-cli",
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
@@ -7,7 +7,8 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "build": "npx tsc",
-    "start": "ts-node src/index.ts"
+    "cli": "ts-node src/index.ts",
+    "verify": "yarn cli"
   },
   "keywords": [],
   "author": "",

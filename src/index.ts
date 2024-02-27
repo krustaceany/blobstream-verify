@@ -25,10 +25,10 @@ async function main() {
   const namespaceHex = process.env.NAMESPACE! as Hex;
 
   program
-    .option('-h, --height <height>', 'block height')
-    .option('-s, --start <start>', 'block start for range')
-    .option('-e, --end <end>', 'block end for range')
-    .option('-n, --nonce <nonce>', 'proof nonce');
+    .requiredOption('-h, --height <height>', 'block height')
+    .requiredOption('-s, --start <start>', 'block start for range')
+    .requiredOption('-e, --end <end>', 'block end for range')
+    .requiredOption('-n, --nonce <nonce>', 'proof nonce');
 
   program.parse(process.argv);
   const options = program.opts();
