@@ -40,6 +40,7 @@ export class CelestiaClient {
         const response = await this.client.get(`/prove_shares?height=${height}&startShare=${startShare}&endShare=${endShare}`);
         const data = response.data as { result: ProveShares };
         const proveShares = data.result;
+        console.log('Getting shares from', startShare, 'to', endShare, 'of namespace', namespace, 'at height', height);
         return parseProveShares(proveShares);
       } catch (error: any) {
         if (axios.isAxiosError(error)) {

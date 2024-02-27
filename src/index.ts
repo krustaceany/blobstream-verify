@@ -61,7 +61,6 @@ async function main() {
     attestationProof,
   }
 
-
   const res = await publicClient.readContract({
     address: verifyContract,
     abi: verifyAbi,
